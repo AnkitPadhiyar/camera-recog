@@ -1,0 +1,16 @@
+# Music Folder Configuration
+# 
+# To connect your music playlist folder:
+# 1. Copy this file and rename it to: music_config.txt
+# 2. Edit music_config.txt and add your music folder path below
+# 3. Restart the application
+#
+# Example paths:
+# Windows: C:\Users\YourName\Music\MyPlaylist
+# Or: D:\Music\Songs
+#
+# The system will scan all subfolders and find all audio files
+# Supported formats: .mp3, .wav, .flac, .ogg, .m4a, .wma, .aac
+#
+# Your music folder path (remove the # and add your path):
+# C:\Users\hp\Music
