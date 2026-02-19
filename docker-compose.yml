@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  gesture-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gesture-ai-agent
+    environment:
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./music_library:/app/music_library:ro
+      - ./logs:/app/logs
+      - ./notes:/app/notes
+      - ./screenshots:/app/screenshots
+      - /dev/video0:/dev/video0  # Camera device
+    devices:
+      - /dev/snd:/dev/snd  # Audio devices
+    privileged: true  # Needed for audio access
+    restart: unless-stopped
+    stdin_open: true
+    tty: true

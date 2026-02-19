@@ -360,6 +360,24 @@ The player will automatically select from available files in each mood folder!
         
         print("✅ Music library ready! Add MP3 files to start playing mood-based music.\n")
     
+    def handle_gesture(self, gesture_type):
+        """Handle gesture-based music controls"""
+        gesture_map = {
+            'wave': self.next_track,
+            'thumbs_up': lambda: self.increase_volume(),
+            'open_palm': lambda: self.pause() if self.is_playing else self.resume(),
+            'pointing': lambda: self.decrease_volume(),
+        }
+        
+        handler = gesture_map.get(gesture_type)
+        if handler:
+            try:
+                handler()
+                return True
+            except Exception as e:
+                print(f"Error handling gesture {gesture_type}: {e}")
+        return False
+    
     def cleanup(self):
         """Clean up music player"""
         try:

@@ -482,8 +482,6 @@ class GestureAIAgent:
         command = self.voice_commander.listen_once()
         if command:
             self._handle_voice_command(command)
-        
-        self.cleanup()
     
     def cleanup(self):
         """Clean up resources"""

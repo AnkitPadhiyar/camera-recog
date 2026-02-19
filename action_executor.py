@@ -73,16 +73,7 @@ class ActionExecutor:
             return None
             
         action = self.mood_actions.get(mood)
-        # Prefer using the music manager for mood-based music
-        if self.music_manager:
-            try:
-                self.music_manager.play_for_mood(mood)
-                result = {"status": "success", "action": f"Playing mood playlist: {mood}"}
-                self.log_action(f"mood_{mood}", result)
-                return result
-            except Exception:
-                pass
-
+        
         if action:
             result = action(mood, confidence)
             self.log_action(f"mood_{mood}", result)
@@ -210,13 +201,6 @@ class ActionExecutor:
     
     def play_happy_sound(self, mood, confidence):
         """Play a happy notification sound"""
-        # If music manager is available, switch to happy playlist
-        if self.music_manager:
-            try:
-                self.music_manager.play_for_mood('happy')
-                return {"status": "success", "action": "Playing happy playlist", "confidence": confidence}
-            except Exception:
-                pass
         return {"status": "success", "action": "Happy mood detected", "confidence": confidence}
 
     # ===== Music Gesture Integration =====
@@ -224,7 +208,7 @@ class ActionExecutor:
     def handle_gesture(self, gesture_type):
         """Expose simple gesture-driven music controls to other modules."""
         try:
-            if self.music_manager:
+            if self.music_manager and hasattr(self.music_manager, 'handle_gesture'):
                 self.music_manager.handle_gesture(gesture_type)
                 self.log_action(f"gesture_{gesture_type}", {"status": "sent_to_music_manager"})
                 return {"status": "success"}
