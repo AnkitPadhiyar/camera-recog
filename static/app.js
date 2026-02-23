@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             console.log('Agent initialized:', data);
             addLog('System initialized', 'info');
+            
+            // Check voice availability
+            checkVoiceAvailability();
         })
         .catch(error => {
             console.error('Initialization error:', error);
@@ -483,6 +486,85 @@ window.addEventListener('online', function() {
     addLog('Network connection restored', 'success');
     updateHealthIndicator(true);
 });
+
+// ==================== Screenshot Functions ====================
+
+function takeScreenshot() {
+    console.log('Taking screenshot...');
+    
+    fetch(`${API_BASE}/screenshot`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                addLog(`Screenshot saved: ${data.filename}`, 'success');
+            } else {
+                addLog(`Failed to take screenshot: ${data.error}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Screenshot error:', error);
+            addLog('Screenshot error', 'error');
+        });
+}
+
+function toggleAutoScreenshot() {
+    console.log('Toggling auto-screenshot...');
+    
+    const payload = { interval: 5 };
+    
+    fetch(`${API_BASE}/screenshot/auto`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        addLog(data.message, 'success');
+        
+        // Update button appearance
+        const btn = document.getElementById('btnAutoScreenshot');
+        if (data.enabled) {
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-primary');
+        } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+        }
+    })
+    .catch(error => {
+        console.error('Auto-screenshot toggle error:', error);
+        addLog('Auto-screenshot error', 'error');
+    });
+}
+
+// ==================== Voice Availability Check ====================
+
+function checkVoiceAvailability() {
+    fetch(`${API_BASE}/voice/status`)
+        .then(response => response.json())
+        .then(data => {
+            const btnVoice = document.getElementById('btnVoice');
+            const btnVoiceText = document.getElementById('btnVoiceText');
+            
+            if (!data.available) {
+                // Microphone not available
+                btnVoice.disabled = true;
+                btnVoice.className = 'btn btn-secondary btn-lg';
+                btnVoiceText.textContent = 'Microphone Not Available';
+                btnVoice.title = 'Microphone is not available on this system';
+                addLog('Microphone not available - voice commands disabled', 'warning');
+            } else {
+                // Microphone is available
+                btnVoice.disabled = false;
+                updateVoiceButton();
+            }
+        })
+        .catch(error => {
+            console.error('Voice status check error:', error);
+        });
+}
 
 // Log initial startup
 addLog('Dashboard loaded successfully', 'success');

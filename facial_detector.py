@@ -236,18 +236,19 @@ class FacialDetector:
         if roi_gray is None:
             return None
         
-        # Initialize expression scores
+        # Initialize expression scores with higher baseline for sensitivity
         expression_scores = {
-            'happy': 0.0,
-            'sad': 0.0,
-            'surprised': 0.0,
-            'angry': 0.0,
-            'neutral': 0.5
+            'happy': 0.1,
+            'sad': 0.1,
+            'surprised': 0.1,
+            'angry': 0.1,
+            'neutral': 0.6
         }
         
-        # Happy detection (smile)
+        # Happy detection (smile) - increased sensitivity
         if len(smiles) > 0:
-            expression_scores['happy'] = 0.7 + (len(smiles) * 0.1)
+            expression_scores['happy'] = 0.75 + (len(smiles) * 0.15)
+            expression_scores['neutral'] = 0.2
             for (sx, sy, sw, sh) in smiles:
                 cv2.rectangle(features['roi_color'], (sx, sy), (sx+sw, sy+sh), (0, 255, 255), 2)
         
@@ -266,46 +267,54 @@ class FacialDetector:
             # Eye region (top-middle 40%)
             eye_region = roi_gray[0:int(h*0.4), :]
             eye_mean = np.mean(eye_region)
+            eye_std = np.std(eye_region)
             
-            # No smile detected - increase sad/angry/neutral scores
+            # No smile detected - analyze other features
             if len(smiles) == 0:
-                # Angry: dark eyebrows + high mouth contrast
-                if eyebrow_mean < 100 and eyebrow_std > 30 and mouth_std > 40:
+                # Angry: dark eyebrows + high mouth contrast (lowered threshold for sensitivity)
+                if eyebrow_mean < 110 and eyebrow_std > 20 and mouth_std > 30:
                     expression_scores['angry'] = 0.65
-                    expression_scores['happy'] = 0.0
-                
-                # Sad: lighter eyebrows + lower mouth mean
-                elif mouth_mean > 130 and eyebrow_mean > 100:
-                    expression_scores['sad'] = 0.65
-                    expression_scores['happy'] = 0.0
-                
-                # Neutral: average values
-                else:
-                    expression_scores['neutral'] = 0.6
                     expression_scores['happy'] = 0.1
+                    expression_scores['neutral'] = 0.25
+                
+                # Sad: lighter eyebrows + lower mouth mean (lowered threshold)
+                elif mouth_mean > 125 and eyebrow_mean > 95:
+                    expression_scores['sad'] = 0.65
+                    expression_scores['happy'] = 0.1
+                    expression_scores['neutral'] = 0.25
+                
+                # Neutral: average values (improved baseline)
+                else:
+                    expression_scores['neutral'] = 0.65
+                    expression_scores['happy'] = 0.15
             else:
                 # Smiling reduces sad/angry scores
-                expression_scores['sad'] = max(0.0, expression_scores['sad'] - 0.3)
-                expression_scores['angry'] = max(0.0, expression_scores['angry'] - 0.3)
+                expression_scores['sad'] = max(0.0, expression_scores['sad'] - 0.4)
+                expression_scores['angry'] = max(0.0, expression_scores['angry'] - 0.4)
             
-            # Surprise: wide eyes + minimal smile
+            # Surprise: wide eyes + minimal smile (improved detection)
             if len(eyes) >= 2 and len(smiles) == 0:
                 eye_areas = [ew * eh for (ex, ey, ew, eh) in eyes]
                 avg_eye_area = np.mean(eye_areas)
-                if avg_eye_area > 600:  # Adjusted threshold
-                    if eye_mean < 120:  # Bright eyes indicate openness
-                        expression_scores['surprised'] = 0.7
+                # Lowered threshold for better sensitivity
+                if avg_eye_area > 500 and eye_std > 25:
+                    if eye_mean < 125:  # Bright eyes indicate openness
+                        expression_scores['surprised'] = 0.70
+                        expression_scores['neutral'] = 0.2
         
         # Get dominant expression
         dominant_expression = max(expression_scores.items(), key=lambda x: x[1])
         expression_type = dominant_expression[0]
         confidence = dominant_expression[1]
         
+        # Ensure minimum confidence of 0.5 for detected faces
+        confidence = max(0.5, confidence)
+        
         # Add to history for smoothing
         self.expression_history.append((expression_type, confidence))
         
-        # Get most common expression from history
-        if len(self.expression_history) >= 3:
+        # Get most common expression from history (less strict smoothing for responsiveness)
+        if len(self.expression_history) >= 2:
             expr_counts = {}
             for expr, conf in self.expression_history:
                 if expr not in expr_counts:
@@ -322,7 +331,7 @@ class FacialDetector:
 
         # Notify callbacks about mood update
         try:
-            if confidence >= 0.5:
+            if confidence >= 0.4:  # Lowered from 0.5 for sensitivity
                 for cb in self.mood_callbacks:
                     try:
                         cb(expression_type, float(confidence))

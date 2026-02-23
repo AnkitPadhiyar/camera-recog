@@ -6,12 +6,13 @@ class GestureProcessor:
     
     def __init__(self):
         self.gesture_thresholds = {
-            'raise_hand': 0.7,
-            'wave': 0.75,
-            'thumbs_up': 0.8,
-            'peace_sign': 0.85,
-            'point': 0.7,
-            'open_palm': 0.75
+            'raise_hand': 0.65,  # Lowered from 0.7
+            'wave': 0.70,        # Lowered from 0.75
+            'thumbs_up': 0.75,   # Lowered from 0.8
+            'peace_sign': 0.80,  # Lowered from 0.85
+            'point': 0.65,       # Lowered from 0.7
+            'open_palm': 0.70,   # Lowered from 0.75
+            'face_detected': 0.4  # New: confidence for just facial features
         }
         
         # Stability improvements
@@ -19,7 +20,7 @@ class GestureProcessor:
         self.buffer_size = 5  # Number of frames to consider
         self.last_confirmed_gesture = None
         self.gesture_hold_frames = 0
-        self.min_hold_frames = 3  # Minimum frames to confirm gesture
+        self.min_hold_frames = 2  # Lowered from 3 for faster response
         self.confidence_history = []
         # Gesture callbacks: fn(gesture_type:str, info:dict)
         self.gesture_callbacks = []
@@ -42,25 +43,44 @@ class GestureProcessor:
             'facial_data': None
         }
         
-        # Analyze hand gestures
-        if hands and hands.multi_hand_landmarks:
-            hand_gesture = self._analyze_hand_gesture(hands)
-            if hand_gesture['confidence'] > gesture_info['confidence']:
-                gesture_info = hand_gesture
+        # Analyze hand gestures FIRST (higher priority)
+        if hands is not None:
+            # Check if this is MediaPipe hand detection results
+            if hasattr(hands, 'multi_hand_landmarks') and hands.multi_hand_landmarks:
+                hand_gesture = self._analyze_hand_gesture(hands)
+                if hand_gesture and hand_gesture['confidence'] > 0.5:
+                    gesture_info = hand_gesture
         
         # Analyze body gestures
-        if pose and pose.pose_landmarks:
+        if pose and hasattr(pose, 'pose_landmarks') and pose.pose_landmarks:
             body_gesture = self._analyze_body_gesture(pose)
-            if body_gesture['confidence'] > gesture_info['confidence']:
+            if body_gesture and body_gesture['confidence'] > gesture_info['confidence']:
                 gesture_info = body_gesture
         
-        # Include facial data (don't override gesture, just include)
-        if facial:
+        # CRITICAL: Use facial expression data if no hand/pose gestures detected
+        if facial and gesture_info.get('confidence', 0) < 0.5:
             gesture_info['facial_data'] = facial
+            expression = facial.get('expression', None)
+            
+            # If we detected an expression, use it as the gesture with confidence
+            if expression and expression.get('expression'):
+                expression_type = expression['expression']
+                expression_confidence = expression.get('confidence', 0.0)
+                
+                # Only update if expression has meaningful confidence
+                if expression_confidence > 0.4:
+                    gesture_info['gesture_type'] = expression_type
+                    gesture_info['confidence'] = expression_confidence
+                    gesture_info['details'] = {
+                        'type': 'facial_expression',
+                        'expression': expression_type,
+                        'confidence': expression_confidence
+                    }
         
         # Apply temporal smoothing
         gesture_info = self._smooth_gesture(gesture_info)
         
+        return gesture_info
         return gesture_info
     
     def _analyze_hand_gesture(self, hands):

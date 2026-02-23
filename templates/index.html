@@ -39,8 +39,11 @@
                             <button id="btnStop" class="btn btn-danger btn-lg" onclick="stopAgent()" disabled>
                                 <i class="bi bi-stop-fill"></i> Stop Agent
                             </button>
-                            <button id="btnVoice" class="btn btn-warning btn-lg" onclick="toggleVoice()">
-                                <i class="bi bi-mic"></i> Enable Voice
+                            <button id="btnVoice" class="btn btn-warning btn-lg" onclick="toggleVoice()" title="Microphone may not be available">
+                                <i class="bi bi-mic"></i> <span id="btnVoiceText">Enable Voice</span>
+                            </button>
+                            <button id="btnAutoScreenshot" class="btn btn-secondary btn-sm" onclick="toggleAutoScreenshot()">
+                                <i class="bi bi-camera-fill"></i> Auto Screenshot
                             </button>
                         </div>
                         <div class="mt-4 p-3 bg-secondary bg-opacity-10 rounded">

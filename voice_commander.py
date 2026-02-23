@@ -50,6 +50,10 @@ class VoiceCommander:
         print("🎤 Voice command listening started!")
         return True
     
+    def start_continuous_listening(self):
+        """Alias for start_listening for compatibility"""
+        return self.start_listening()
+    
     def stop_listening(self):
         """Stop listening for voice commands"""
         self.is_listening = False
@@ -139,3 +143,7 @@ class VoiceCommander:
         except Exception as e:
             print(f"❌ Microphone test failed: {e}")
             return False
+    
+    def is_available(self):
+        """Check if microphone is available"""
+        return self.microphone_available
